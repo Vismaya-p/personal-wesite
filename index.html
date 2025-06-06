@@ -1,51 +1,115 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🜈 Vismaya's personal site</title>
-</head>
-<body>
-    <table cellspacing="20">
-        <tr>
-            <td><img src="rapunzel-modified.png" alt="vismaya profile picture"></td>
-            <td><h1>VISMAYA</h1>
-                <p><em>Studet @<strong><a href="https://r.search.yahoo.com/_ylt=AwrKDhwZImJlZM8xeBq7HAx.;_ylu=Y29sbwNzZzMEcG9zAzEEdnRpZAMEc2VjA3Ny/RV=2/RE=1700958874/RO=10/RU=https%3a%2f%2fcethalassery.ac.in%2f/RK=2/RS=wFiEpJ6R1IBSZdVtdOljRCD6yok-"> COET </a></strong></em></p>   
-                <p>Pursuing Btech in Cse. I love to code</p></td>
-        </tr>
-    </table>
-    
-<hr>
-<h3>Interests</h3>
-<ul>
-    <li>Drawing</li>
-    <li>painting</li>
-    <li>coding</li>
-    <li>listening to music</li>
-<hr>
-</ul>
-<h3>Languages</h3>
-<ol>
-    <li>English</li>
-    <li>Hindi</li>
-    <li>Malayalam</li>
-<hr>
-</ol>
-<h3>Programming languages</h3>
-<p>C,python,html,js,java and mysql</p>
-<hr>
-<h3>Skills</h3>
-<table>
-    <tr>
-        <td>App development</td>
-        <td>❤❤❤❤❤</td>
-        </tr>
-        <tr>
-        <td>Web development</td>
-        <td>❤❤❤</td>
-    </tr>
-</table>
-<hr>
-<a href="contact-me.html">Contact me</a>
-</body>
-</html>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <fstream>
+#include <map>
+
+using namespace std;
+
+class EmulatorMP {
+    map<string, int> registers;
+    vector<int> memory;
+    vector<string> instructions;
+    int PC;
+
+public:
+    EmulatorMP() {
+        PC = 0;
+        memory.resize(64, 0);
+        registers["AX"] = 0;
+        registers["BX"] = 0;
+        registers["CX"] = 0;
+        registers["DX"] = 0;
+    }
+
+    void loadInstructions(const string& filename) {
+        ifstream file(filename);
+        string line;
+        while (getline(file, line)) {
+            if (!line.empty())
+                instructions.push_back(line);
+        }
+        file.close();
+    }
+
+    int getValue(const string& operand) {
+        if (operand[0] == '[') {
+            int addr = stoi(operand.substr(1, operand.length() - 2));
+            return memory[addr];
+        }
+        if (registers.find(operand) != registers.end())
+            return registers[operand];
+        return stoi(operand);
+    }
+
+    void setRegister(const string& reg, int value) {
+        if (registers.find(reg) != registers.end())
+            registers[reg] = value;
+    }
+
+    void store(const string& dest, const string& src) {
+        if (dest[0] == '[') {
+            int addr = stoi(dest.substr(1, dest.length() - 2));
+            memory[addr] = getValue(src);
+        } else {
+            setRegister(dest, getValue(src));
+        }
+    }
+
+    void add(const string& reg1, const string& reg2) {
+        registers["AX"] = getValue(reg1) + getValue(reg2);
+    }
+
+    void sub(const string& reg1, const string& reg2) {
+        registers["AX"] = getValue(reg1) - getValue(reg2);
+    }
+
+    void mul(const string& reg1, const string& reg2) {
+        registers["AX"] = getValue(reg1) * getValue(reg2);
+    }
+
+    void divide(const string& reg1, const string& reg2) {
+        int divisor = getValue(reg2);
+        if (divisor != 0)
+            registers["AX"] = getValue(reg1) / divisor;
+    }
+
+    void display() {
+        for (auto& reg : registers)
+            cout << reg.first << " = " << reg.second << endl;
+        for (int i = 0; i < 16; ++i)
+            cout << "[" << i << "] = " << memory[i] << endl;
+    }
+
+    void execute() {
+        while (PC < instructions.size()) {
+            string inst = instructions[PC];
+            if (inst == "HLT") break;
+
+            size_t spacePos = inst.find(' ');
+            string cmd = inst.substr(0, spacePos);
+            string args = inst.substr(spacePos + 1);
+
+            size_t commaPos = args.find(',');
+            string op1 = args.substr(0, commaPos);
+            string op2 = args.substr(commaPos + 1);
+
+            if (cmd == "MOV") store(op1, op2);
+            else if (cmd == "ADD") add(op1, op2);
+            else if (cmd == "SUB") sub(op1, op2);
+            else if (cmd == "MUL") mul(op1, op2);
+            else if (cmd == "DIV") divide(op1, op2);
+
+            PC++;
+        }
+
+        display();
+    }
+};
+
+int main() {
+    EmulatorMP emulator;
+    emulator.loadInstructions("instructions.txt");
+    emulator.execute();
+    return 0;
+}
